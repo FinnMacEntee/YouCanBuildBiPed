@@ -10,18 +10,28 @@
 
 int pot1;
 int pot2;
+int pot3;
+//pin set up
+int buttonPin = 5;
+#define BUTTON_PIN D2 // D2 pin connected to button
+
+int prev_state = HIGH; // the previous state from the input pin
+int button_state;     // the current reading from the input pin
 
 #include <esp_now.h>
 #include <WiFi.h>
 
 // REPLACE WITH YOUR RECEIVER MAC Address
-uint8_t broadcastAddress[] = {0xC8, 0xF0, 0x9E, 0x67, 0x3C, 0xD0};    // example C8:F0:9E:67:3C:D0
+uint8_t broadcastAddress[] = {0x20, 0x6E, 0xF1, 0x31, 0x66, 0xD4};    // example 20:6E:F1:31:66:D4 (currently correct for esp#2 to send to #1)
 
 // Structure example to send data
 // Must match the receiver structure
 typedef struct struct_message {
   int a;    // pot1
   int b;    // pot2
+  //adding new ports
+  int c; //pot3
+  int d; //pot4
 
 } struct_message;
 
@@ -40,6 +50,12 @@ void setup() {
   // Init Serial Monitor
   Serial.begin(115200);
  
+//setup pins
+//pinMode(buttonPin, INPUT); old
+//digitalWrite(buttonPin, HIGH); old
+pinMode(BUTTON_PIN, INPUT_PULLUP);
+
+
   // Set device as a Wi-Fi Station
   WiFi.mode(WIFI_STA);
 
@@ -68,16 +84,37 @@ void setup() {
 void loop() {
 
         // read pots
-        pot1 = analogRead(34);      // pot pin
-        pot2 = analogRead(35);      // pot pin
+        pot1 = analogRead(A6);      // pot pin
+        pot2 = analogRead(A7);      // pot pin
+        pot3 = 0;
+//        pot3 = digitalRead(buttonPin);
+//      Serial.println(digitalRead(buttonPin));
+// new button code
+  button_state = digitalRead(BUTTON_PIN);
+
+  if(prev_state == LOW && button_state == HIGH)
+  pot3 = 1;
+ //   Serial.println("The state changed from LOW to HIGH");
+
+  // save the last state
+  prev_state = button_state;
+
 
         // Set values to send
         myData.a = pot1;
         myData.b = pot2;
-        
+        myData.c = pot3;
+        myData.d = D2;
         // Send message via ESP-NOW
-        esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
-        delay(20); 
+       // esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
+       Serial.print(myData.a);
+       Serial.print(" ");
+       Serial.print(myData.b);
+       Serial.print(" ");
+       Serial.print(myData.c);
+       Serial.print(" ");
+       Serial.println(myData.d);
+        delay(500); 
       }
       
   

@@ -13,4 +13,4 @@ void loop(){
 }
 
 //mac adress for arduino nano esp32 #1: 20:6E:F1:31:66:D4
-//mac adress for arduino nano esp32 #1: 20:6E:F1:30:BC:50
+//mac adress for arduino nano esp32 #2: 20:6E:F1:30:BC:50
