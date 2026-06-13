@@ -109,6 +109,15 @@ struct_message myData;
 // callback function that will be executed when data is received
 void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
   memcpy(&myData, incomingData, sizeof(myData));
+//print data
+Serial.print(myData.a);
+       Serial.print(" ");
+       Serial.print(myData.b);
+       Serial.print(" ");
+       Serial.print(myData.c);
+       Serial.print(" ");
+       Serial.println(myData.d);
+
 
   pot2 = myData.a - 1919;     // modify offset to get zero when stick is stationary
   pot1 = myData.b - 1950;     // modify offset to get zero when stick is stationary

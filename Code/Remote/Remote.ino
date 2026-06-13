@@ -104,9 +104,9 @@ void loop() {
         myData.a = pot1;
         myData.b = pot2;
         myData.c = pot3;
-        myData.d = D2;
+       // myData.d = D2;
         // Send message via ESP-NOW
-       // esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
+      esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
        Serial.print(myData.a);
        Serial.print(" ");
        Serial.print(myData.b);
