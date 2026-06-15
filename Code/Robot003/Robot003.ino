@@ -12,8 +12,8 @@ Servo servo5;
 #include "SparkFun_BNO08x_Arduino_Library.h"  // CTRL+Click here to get the library: http://librarymanager/All#SparkFun_BNO08x
 BNO08x myIMU;
 
-#define BNO08X_INT  19
-#define BNO08X_RST  18
+#define BNO08X_INT  A7  //These were 19; 18;
+#define BNO08X_RST  A6
 #define BNO08X_ADDR 0x4B  // SparkFun BNO08x Breakout (Qwiic) defaults to 0x4B
 
 #include <esp_now.h>
@@ -60,11 +60,11 @@ float servo5Output = 1500;      // rotation axis
 
 // offset for servos - start with zero and adjust until all servos are in the correct starting position with all legs down
 
-int servo1Offset = -60;       // right upper leg - lower number maks the leg longer
-int servo2Offset = 30;     // right lower leg - lower number maks the leg longer
-int servo3Offset = 32;      // left upper leg - higher number makes the leg longer
-int servo4Offset = 5;      // left lower leg - higher number makes the leg longer
-int servo5Offset = 30;      // rotation axis - higher number closes legs more
+int servo1Offset =  0;    //-60;       // right upper leg - lower number maks the leg longer
+int servo2Offset =  0;   //30;     // right lower leg - lower number maks the leg longer
+int servo3Offset =  0;   //32;      // left upper leg - higher number makes the leg longer
+int servo4Offset =  0;   //5;      // left lower leg - higher number makes the leg longer
+int servo5Offset =  0;   //30;      // rotation axis - higher number closes legs more
 
 // Structure example to receive data
 // Must match the sender structure
@@ -190,11 +190,14 @@ Interpolation interpLY;
  
 void setup() {
   // Initialize Serial Monitor
+  delay(10);
   Serial.begin(115200);
-  
+  while(!Serial)
+  delay(100);
+  Serial.println("hello world");
+
   // Set device as a Wi-Fi Station
   WiFi.mode(WIFI_STA);
-
   // Init ESP-NOW
   if (esp_now_init() != ESP_OK) {
     Serial.println("Error initializing ESP-NOW");
@@ -207,18 +210,28 @@ void setup() {
 
    Wire.begin();
 
-  if (myIMU.begin(BNO08X_ADDR, Wire, BNO08X_INT, BNO08X_RST) == false) {
-      Serial.println("BNO08x not detected at default I2C address. Check your jumpers and the hookup guide. Freezing...");
-      while (1);
-  }
-  Serial.println("BNO08x found!");
 
+/*
+  if (myIMU.begin() == false) {
+    while (1); // Halt if sensor not found
+  }
+*/
+  
+if (myIMU.begin(BNO08X_ADDR, Wire, BNO08X_INT, BNO08X_RST) == false) {  //this code was found inside parenth: BNO08X_ADDR, Wire, BNO08X_INT, BNO08X_RST
+     Serial.println("BNO08x not detected at default I2C address. Check your jumpers and the hookup guide. Freezing...");
+      while (1);
+  }else{
+  Serial.println("trying");
+  }
+
+  
+Serial.println("BNO08x found!");
   // attach servos to pins
-  servo1.attach(13);        // right upper leg
-  servo2.attach(12);        // left lower leg
-  servo3.attach(14);        // left upper leg
-  servo4.attach(27);        // right lower leg
-  servo5.attach(26);        // rotation axis
+ // servo1.attach(13);        // right upper leg
+ // servo2.attach(12);        // left lower leg
+ // servo3.attach(14);        // left upper leg
+ // servo4.attach(27);        // right lower leg
+ // servo5.attach(12);        // rotation axis
 }
 
 // Here is where you define the sensor outputs you want to receive
@@ -231,9 +244,10 @@ void setReports(void) {
     Serial.println("Could not enable rotation vector");
   }
 }
- 
-void loop() {
 
+void loop() {
+  delay(5000);
+return;
   currentMillis = millis();
   if (currentMillis - previousMillis >= 10) {     // this loop runs every 10ms
       previousMillis = currentMillis;
@@ -259,7 +273,7 @@ void loop() {
 
       if (but1 == 0 && modeDB1 == 0) {
         modeDB1 = 1;
-        robotMode = robotMode + 1;        
+        //robotMode = robotMode + 1;        
       }
       else if (but1 == 1) {
         modeDB1 = 0;
@@ -267,7 +281,7 @@ void loop() {
 
       if (but2 == 0 && modeDB2 == 0) {
         modeDB2 = 1;
-        robotMode = robotMode - 1;        
+        //robotMode = robotMode - 1;        
       }
       else if (but2 == 1) {
         modeDB2 = 0;
@@ -277,10 +291,10 @@ void loop() {
       if (robotMode == 0) {
         // default positions at power on
         // write to servos
-        servo1.writeMicroseconds(servo1Output + servo1Offset);
-        servo2.writeMicroseconds(servo2Output + servo2Offset);
-        servo3.writeMicroseconds(servo3Output + servo3Offset);
-        servo4.writeMicroseconds(servo4Output + servo4Offset);
+        //servo1.writeMicroseconds(servo1Output + servo1Offset);
+        //servo2.writeMicroseconds(servo2Output + servo2Offset);
+        //servo3.writeMicroseconds(servo3Output + servo3Offset);
+        //servo4.writeMicroseconds(servo4Output + servo4Offset);
         servo5.writeMicroseconds(servo5Output + servo5Offset);
       }
       else if (robotMode == 1) {

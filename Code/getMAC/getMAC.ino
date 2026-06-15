@@ -8,7 +8,7 @@ void setup(){
  //this is a comment test
 void loop(){
   Serial.println(WiFi.macAddress());
-  delay(5000);
+  delay(20000);
 
 }
 
