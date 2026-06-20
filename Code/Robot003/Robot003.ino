@@ -231,7 +231,7 @@ Serial.println("BNO08x found!");
  // servo2.attach(12);        // left lower leg
  // servo3.attach(14);        // left upper leg
  // servo4.attach(27);        // right lower leg
- // servo5.attach(12);        // rotation axis
+  servo5.attach(47);        // rotation axis
 }
 
 // Here is where you define the sensor outputs you want to receive
@@ -247,7 +247,6 @@ void setReports(void) {
 
 void loop() {
   delay(5000);
-return;
   currentMillis = millis();
   if (currentMillis - previousMillis >= 10) {     // this loop runs every 10ms
       previousMillis = currentMillis;
@@ -287,7 +286,6 @@ return;
         modeDB2 = 0;
       }      
       robotMode = constrain(robotMode,0,3);   // constrain mode/menu options
-
       if (robotMode == 0) {
         // default positions at power on
         // write to servos
@@ -296,6 +294,7 @@ return;
         //servo3.writeMicroseconds(servo3Output + servo3Offset);
         //servo4.writeMicroseconds(servo4Output + servo4Offset);
         servo5.writeMicroseconds(servo5Output + servo5Offset);
+        Serial.println("got past stand up");
       }
       else if (robotMode == 1) {
         // inverse kinematics test       
