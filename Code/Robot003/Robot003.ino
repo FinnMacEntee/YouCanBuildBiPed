@@ -32,6 +32,7 @@ int modeDB2;     // mode debounce
 // IMU axis 
 
 float roll;
+
 float pitch;
 float yaw;
 
@@ -62,12 +63,14 @@ float servo5Output = 1500;      // rotation axis
 
 int servo1Offset =  0;    //-60;       // right upper leg - lower number maks the leg longer
 int servo2Offset =  0;   //30;     // right lower leg - lower number maks the leg longer
-int servo3Offset =  0;   //32;      // left upper leg - higher number makes the leg longer
+int servo3Offset =  250;   //32;      // left upper leg - higher number makes the leg longer
 int servo4Offset =  0;   //5;      // left lower leg - higher number makes the leg longer
 int servo5Offset =  0;   //30;      // rotation axis - higher number closes legs more
 
 // Structure example to receive data
 // Must match the sender structure
+//NEW SKETCH
+
 typedef struct struct_message {
   int a;    // pot1
   int b;    // pot2
@@ -229,8 +232,8 @@ Serial.println("BNO08x found!");
   // attach servos to pins
  // servo1.attach(13);        // right upper leg
  // servo2.attach(12);        // left lower leg
- // servo3.attach(14);        // left upper leg
- // servo4.attach(27);        // right lower leg
+  servo3.attach(38);        // left upper leg
+  servo4.attach(21);        // right lower leg
   servo5.attach(47);        // rotation axis
 }
 
@@ -291,7 +294,7 @@ void loop() {
         // write to servos
         //servo1.writeMicroseconds(servo1Output + servo1Offset);
         //servo2.writeMicroseconds(servo2Output + servo2Offset);
-        //servo3.writeMicroseconds(servo3Output + servo3Offset);
+        servo3.writeMicroseconds(servo3Output + servo3Offset);
         //servo4.writeMicroseconds(servo4Output + servo4Offset);
         servo5.writeMicroseconds(servo5Output + servo5Offset);
         Serial.println("got past stand up");
