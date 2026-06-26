@@ -250,11 +250,36 @@ Serial.println("BNO08x found!");
   //servo4.detach();
   //servo5.detach();
 
-  servo1.attach(47, 500, 2400);        // right upper leg
-  //  servo1.detach();
-  servo2.attach(21, 500, 2400);        // right lower leg
-  servo3.attach(18, 500, 2400);        // left upper leg
-  servo4.attach(17, 500, 2400);        // left lower leg
+  // Use a standard 50Hz servo period explicitly on each channel.
+  servo1.setPeriodHertz(50);
+  servo2.setPeriodHertz(50);
+  servo3.setPeriodHertz(50);
+  servo4.setPeriodHertz(50);
+
+  int servo1AttachChannel = servo1.attach(47, 500, 2400);        // right upper leg
+  int servo2AttachChannel = servo2.attach(21, 500, 2400);        // right lower leg
+  int servo3AttachChannel = servo3.attach(18, 500, 2400);        // left upper leg
+  int servo4AttachChannel = servo4.attach(17, 500, 2400);        // left lower leg
+
+  Serial.print("servo1 attach channel: ");
+  Serial.print(servo1AttachChannel);
+  Serial.print(" attached=");
+  Serial.println(servo1.attached() ? "yes" : "no");
+
+  Serial.print("servo2 attach channel: ");
+  Serial.print(servo2AttachChannel);
+  Serial.print(" attached=");
+  Serial.println(servo2.attached() ? "yes" : "no");
+
+  Serial.print("servo3 attach channel: ");
+  Serial.print(servo3AttachChannel);
+  Serial.print(" attached=");
+  Serial.println(servo3.attached() ? "yes" : "no");
+
+  Serial.print("servo4 attach channel: ");
+  Serial.print(servo4AttachChannel);
+  Serial.print(" attached=");
+  Serial.println(servo4.attached() ? "yes" : "no");
   //servo5.attach(38, 500, 2400);        // rotation axis
 
 
