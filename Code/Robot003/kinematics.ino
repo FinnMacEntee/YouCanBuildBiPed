@@ -78,7 +78,7 @@ void kinematics (int leg, float xIn, float yIn, float zIn, int interOn, int dur)
     servo3.writeMicroseconds(servo3Output + servo3Offset);
     servo4.writeMicroseconds(servo4Output + servo4Offset);
     servo5.writeMicroseconds(servo5Output + servo5Offset);    
-
+    Serial.println("   kinematics ran !!!!! ");
 }
 
 
