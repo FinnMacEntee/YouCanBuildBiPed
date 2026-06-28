@@ -228,7 +228,9 @@ void handleWriteAll() {
 
 // ─── Setup ───────────────────────────────────────────────────────
 void setup() {
+  delay(10);
   Serial.begin(115200);
+  if(!Serial) delay(1000);
   // No while(!Serial) — board must run headless without USB.
 
   addLog("=== ESP32 Servo Tester boot ===");
@@ -254,6 +256,15 @@ void setup() {
   } else {
     addLog("WiFi FAILED after " + String(attempts) + " attempts. Server unreachable.");
   }
+
+  // Give the ESP32Servo library access to all 4 LEDC hardware timers.
+  // Without this, every attach() defaults to timer 0, causing channels
+  // that share that timer to interfere with each other's PWM frequency.
+  ESP32PWM::allocateTimer(0);
+  ESP32PWM::allocateTimer(1);
+  ESP32PWM::allocateTimer(2);
+  ESP32PWM::allocateTimer(3);
+  addLog("LEDC timers 0-3 allocated (one per servo, no cross-talk).");
 
   server.on("/",         handleRoot);
   server.on("/attach",   handleAttach);

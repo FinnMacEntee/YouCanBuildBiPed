@@ -195,8 +195,7 @@ void setup() {
   // Initialize Serial Monitor
   delay(10);
   Serial.begin(115200);
-  while(!Serial)
-  delay(100);
+  if(!Serial) delay(1000);
   Serial.println("hello world");
 
   // Set device as a Wi-Fi Station
@@ -249,6 +248,14 @@ Serial.println("BNO08x found!");
   //servo3.detach();
   //servo4.detach();
   //servo5.detach();
+
+  // Give the ESP32Servo library access to all 4 LEDC hardware timers.
+  // Without this, every attach() defaults to timer 0, causing channels
+  // that share that timer to interfere with each other's PWM frequency.
+  ESP32PWM::allocateTimer(0);
+  ESP32PWM::allocateTimer(1);
+  ESP32PWM::allocateTimer(2);
+  ESP32PWM::allocateTimer(3);
 
   // Use a standard 50Hz servo period explicitly on each channel.
   servo1.setPeriodHertz(50);
