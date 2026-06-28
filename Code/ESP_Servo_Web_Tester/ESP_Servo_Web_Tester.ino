@@ -1,4 +1,12 @@
-
+/*
+Runtime errors:
+=== Ready ===
+>> Servo 1 ledcSetup(ch=0, pin=GPIO47) actualFreq=0.00Hz -> FAILED
+>> Servo 2 ledcSetup(ch=1, pin=GPIO21) actualFreq=0.00Hz -> FAILED
+>> Servo 3 ledcSetup(ch=2, pin=GPIO18) actualFreq=0.00Hz -> FAILED
+>> Servo 4 ledcSetup(ch=3, pin=GPIO17) actualFreq=0.00Hz -> FAILED
+>> Servo 5 ledcSetup(ch=4, pin=GPIO38) actualFreq=0.00Hz -> FAILED
+*/ 
 #include <WiFi.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
