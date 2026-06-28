@@ -1,3 +1,18 @@
+/*
+Compilation error: 'ledcAttachChannel' was not declared in this scope
+
+The error 'ledcAttachChannel' was not declared in this scope occurs because you are using PlatformIO with an older version of the Espressif32 platform, or you are using the simplified ESP32 Arduino Core 3.x API where manual channel assignment is completely optional.The ESP32 LEDC (PWM) API underwent significant breaking changes moving from version 2.x to 3.x. You can resolve this compiler issue using one of the solutions below.Solution 1: Use the Simplified ledcAttach API (Recommended)In Arduino Core 3.x, you no longer need to manage channels manually. The background system assigns them automatically. Switch to the streamlined ledcAttach function instead.
+Solution 2: Update PlatformIO to Support Core 3.xIf you are receiving this message while using PlatformIO, it is likely because the default upstream development platform hasn't caught up to the specific function signature. You can switch your compilation framework to the community-maintained core that supports the 3.x API. Update your platformio.ini file:ini[env:esp32dev]
+; Replace the standard platform line with pioarduino
+platform = https://github.com
+board = esp32dev
+framework = arduino
+Use code with caution.Solution 3: Downgrade to Arduino Core 2.xIf your project depends heavily on a legacy third-party library that relies on older functions like ledcSetup() and ledcAttachPin(), downgrading is the easiest fix.Arduino IDE: Navigate to Tools > Board > Boards Manager. Search for esp32 by Espressif Systems and select version 2.0.17 from the dropdown menu, then click Update.PlatformIO: Lock your platform version to a 2.x-compatible core inside your platformio.ini file:iniplatform = espressif32 @ 6.6.0 ; Uses Core 2.0.14
+Use code with caution.For more documentation regarding these structural updates, check out the official Espressif LED Control (LEDC) API Reference or view active developer workarounds on the GitHub Issue Tracker.If you are still experiencing compiler issues, could you share what environment you are compiling in (Arduino IDE vs PlatformIO) and paste the setup block of your code
+*/
+
+
+
 #include <WiFi.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
