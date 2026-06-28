@@ -1,7 +1,8 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
-#include <ESP32Servo.h>
+// Direct LEDC API — no ESP32Servo library.
+// Requires Arduino ESP32 core 3.0+ (Nano ESP32 package).
 
 // ─── WiFi ────────────────────────────────────────────────────────
 const char* ssid     = "JDM";
@@ -12,22 +13,33 @@ WebServer server(80);
 // ─── Servo config ────────────────────────────────────────────────
 const int SERVO_COUNT = 5;
 
-const int SERVO_PINS[SERVO_COUNT] = {47, 21, 18, 17, 38};
+const int SERVO_PINS[SERVO_COUNT]     = {47, 21, 18, 17, 38};
+// Explicit LEDC hardware channels 0-4 (ESP32-S3 has channels 0-7).
+// Hard-coding these avoids the auto-allocator that produced channels 100-104.
+const int SERVO_CHANNELS[SERVO_COUNT] = { 0,  1,  2,  3,  4};
 
 const char* SERVO_LABELS[SERVO_COUNT] = {
-  "S1  GPIO47  R-Upper",
-  "S2  GPIO21  R-Lower",
-  "S3  GPIO18  L-Upper",
-  "S4  GPIO17  L-Lower",
-  "S5  GPIO38  Hips"
+  "S1  GPIO47  ch0  R-Upper",
+  "S2  GPIO21  ch1  R-Lower",
+  "S3  GPIO18  ch2  L-Upper",
+  "S4  GPIO17  ch3  L-Lower",
+  "S5  GPIO38  ch4  Hips"
 };
 
-const int SERVO_MIN_US = 500;
-const int SERVO_MAX_US = 2400;
+const int  SERVO_FREQ    = 50;    // Hz
+const int  SERVO_RES     = 16;    // bits  (65536 counts = 20 000 µs period)
+const int  SERVO_MIN_US  = 500;
+const int  SERVO_MAX_US  = 2400;
 
-Servo servos[SERVO_COUNT];
-bool  servoAttached[SERVO_COUNT] = {false, false, false, false, false};
-int   servoLastUs[SERVO_COUNT]   = {1500, 1500, 1500, 1500, 1500};
+bool servoAttached[SERVO_COUNT] = {false, false, false, false, false};
+int  servoLastUs[SERVO_COUNT]   = {1500, 1500, 1500, 1500, 1500};
+
+// Convert microseconds → 16-bit LEDC duty value for 50 Hz.
+// Period = 20 000 µs = 65536 counts  →  1 count ≈ 0.305 µs
+uint32_t usToDuty(int us) {
+  return (uint32_t)constrain(us, SERVO_MIN_US, SERVO_MAX_US)
+         * (1 << SERVO_RES) / 20000;
+}
 
 // ─── Debug log (circular buffer) ─────────────────────────────────
 const int LOG_MAX = 80;
@@ -164,12 +176,18 @@ void handleAttach() {
   if (servoAttached[i]) {
     addLog(">> Servo " + String(n) + " already attached - skipped.");
   } else {
-    servos[i].setPeriodHertz(50);
-    int ch = servos[i].attach(SERVO_PINS[i], SERVO_MIN_US, SERVO_MAX_US);
-    servoAttached[i] = servos[i].attached();
-    addLog(">> Servo " + String(n) + " attach() channel=" + String(ch) +
-           "  attached=" + (servoAttached[i] ? "YES" : "NO") +
-           "  pin=GPIO" + String(SERVO_PINS[i]));
+    // ledcAttachChannel assigns this pin exclusively to the given
+    // hardware LEDC channel. Returns true on success.
+    bool ok = ledcAttachChannel(SERVO_PINS[i], SERVO_FREQ, SERVO_RES,
+                                SERVO_CHANNELS[i]);
+    servoAttached[i] = ok;
+    // Write a neutral 1500 µs pulse immediately so the servo holds centre.
+    if (ok) ledcWrite(SERVO_PINS[i], usToDuty(servoLastUs[i]));
+    addLog(">> Servo " + String(n) +
+           " ledcAttachChannel(pin=GPIO" + String(SERVO_PINS[i]) +
+           ", ch=" + String(SERVO_CHANNELS[i]) +
+           ") -> " + (ok ? "OK  pulse=" + String(servoLastUs[i]) + "us"
+                         : "FAILED"));
   }
   redirectHome();
 }
@@ -183,9 +201,12 @@ void handleDetach() {
   if (!servoAttached[i]) {
     addLog(">> Servo " + String(n) + " already detached - skipped.");
   } else {
-    servos[i].detach();
+    // ledcDetach removes the GPIO matrix connection and stops PWM output.
+    ledcDetach(SERVO_PINS[i]);
     servoAttached[i] = false;
-    addLog(">> Servo " + String(n) + " detached  pin=GPIO" + String(SERVO_PINS[i]));
+    addLog(">> Servo " + String(n) + " detached"
+           "  pin=GPIO" + String(SERVO_PINS[i]) +
+           "  ch=" + String(SERVO_CHANNELS[i]));
   }
   redirectHome();
 }
@@ -203,9 +224,13 @@ void handleWrite() {
   if (!servoAttached[i]) {
     addLog(">> Servo " + String(n) + " NOT attached - write ignored.");
   } else {
-    servos[i].writeMicroseconds(us);
+    uint32_t duty = usToDuty(us);
+    ledcWrite(SERVO_PINS[i], duty);
     servoLastUs[i] = us;
-    addLog(">> Servo " + String(n) + " writeMicroseconds(" + String(us) + ")  ok");
+    addLog(">> Servo " + String(n) +
+           " ledcWrite(ch=" + String(SERVO_CHANNELS[i]) +
+           ", duty=" + String(duty) +
+           ")  =" + String(us) + "us");
   }
   redirectHome();
 }
@@ -216,10 +241,14 @@ void handleWriteAll() {
   int wrote = 0;
   for (int i = 0; i < SERVO_COUNT; i++) {
     if (servoAttached[i]) {
-      servos[i].writeMicroseconds(us);
+      uint32_t duty = usToDuty(us);
+      ledcWrite(SERVO_PINS[i], duty);
       servoLastUs[i] = us;
       wrote++;
-      addLog(">> Servo " + String(i + 1) + " writeMicroseconds(" + String(us) + ")  ok");
+      addLog(">> Servo " + String(i + 1) +
+             " ledcWrite(ch=" + String(SERVO_CHANNELS[i]) +
+             ", duty=" + String(duty) +
+             ")  =" + String(us) + "us");
     }
   }
   if (wrote == 0) addLog(">> writeAll: no servos attached - nothing written.");
@@ -257,14 +286,9 @@ void setup() {
     addLog("WiFi FAILED after " + String(attempts) + " attempts. Server unreachable.");
   }
 
-  // Give the ESP32Servo library access to all 4 LEDC hardware timers.
-  // Without this, every attach() defaults to timer 0, causing channels
-  // that share that timer to interfere with each other's PWM frequency.
-  ESP32PWM::allocateTimer(0);
-  ESP32PWM::allocateTimer(1);
-  ESP32PWM::allocateTimer(2);
-  ESP32PWM::allocateTimer(3);
-  addLog("LEDC timers 0-3 allocated (one per servo, no cross-talk).");
+  // Using direct LEDC API - no library timer allocation needed.
+  // Channels 0-4 are hard-assigned above in SERVO_CHANNELS[].
+  addLog("Direct LEDC mode. Servo channels: 0=S1 1=S2 2=S3 3=S4 4=S5");
 
   server.on("/",         handleRoot);
   server.on("/attach",   handleAttach);
