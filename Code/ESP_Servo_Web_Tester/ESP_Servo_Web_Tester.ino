@@ -1,23 +1,9 @@
-/*
-Compilation error: 'ledcAttachChannel' was not declared in this scope
-
-The error 'ledcAttachChannel' was not declared in this scope occurs because you are using PlatformIO with an older version of the Espressif32 platform, or you are using the simplified ESP32 Arduino Core 3.x API where manual channel assignment is completely optional.The ESP32 LEDC (PWM) API underwent significant breaking changes moving from version 2.x to 3.x. You can resolve this compiler issue using one of the solutions below.Solution 1: Use the Simplified ledcAttach API (Recommended)In Arduino Core 3.x, you no longer need to manage channels manually. The background system assigns them automatically. Switch to the streamlined ledcAttach function instead.
-Solution 2: Update PlatformIO to Support Core 3.xIf you are receiving this message while using PlatformIO, it is likely because the default upstream development platform hasn't caught up to the specific function signature. You can switch your compilation framework to the community-maintained core that supports the 3.x API. Update your platformio.ini file:ini[env:esp32dev]
-; Replace the standard platform line with pioarduino
-platform = https://github.com
-board = esp32dev
-framework = arduino
-Use code with caution.Solution 3: Downgrade to Arduino Core 2.xIf your project depends heavily on a legacy third-party library that relies on older functions like ledcSetup() and ledcAttachPin(), downgrading is the easiest fix.Arduino IDE: Navigate to Tools > Board > Boards Manager. Search for esp32 by Espressif Systems and select version 2.0.17 from the dropdown menu, then click Update.PlatformIO: Lock your platform version to a 2.x-compatible core inside your platformio.ini file:iniplatform = espressif32 @ 6.6.0 ; Uses Core 2.0.14
-Use code with caution.For more documentation regarding these structural updates, check out the official Espressif LED Control (LEDC) API Reference or view active developer workarounds on the GitHub Issue Tracker.If you are still experiencing compiler issues, could you share what environment you are compiling in (Arduino IDE vs PlatformIO) and paste the setup block of your code
-*/
-
-
 
 #include <WiFi.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
 // Direct LEDC API — no ESP32Servo library.
-// Requires Arduino ESP32 core 3.0+ (Nano ESP32 package).
+// Uses Arduino ESP32 core 2.x API: ledcSetup / ledcAttachPin / ledcWrite(channel).
 
 // ─── WiFi ────────────────────────────────────────────────────────
 const char* ssid     = "JDM";
@@ -191,18 +177,23 @@ void handleAttach() {
   if (servoAttached[i]) {
     addLog(">> Servo " + String(n) + " already attached - skipped.");
   } else {
-    // ledcAttachChannel assigns this pin exclusively to the given
-    // hardware LEDC channel. Returns true on success.
-    bool ok = ledcAttachChannel(SERVO_PINS[i], SERVO_FREQ, SERVO_RES,
-                                SERVO_CHANNELS[i]);
+    // Core 2.x API: ledcSetup configures the hardware channel/timer,
+    // ledcAttachPin routes the GPIO matrix to that channel.
+    // ledcSetup returns the actual configured frequency (0.0 means error).
+    double actualFreq = ledcSetup(SERVO_CHANNELS[i], SERVO_FREQ, SERVO_RES);
+    bool ok = (actualFreq > 0.0);
+    if (ok) {
+      ledcAttachPin(SERVO_PINS[i], SERVO_CHANNELS[i]);
+      // Write a neutral pulse immediately so the servo holds centre.
+      ledcWrite(SERVO_CHANNELS[i], usToDuty(servoLastUs[i]));
+    }
     servoAttached[i] = ok;
-    // Write a neutral 1500 µs pulse immediately so the servo holds centre.
-    if (ok) ledcWrite(SERVO_PINS[i], usToDuty(servoLastUs[i]));
     addLog(">> Servo " + String(n) +
-           " ledcAttachChannel(pin=GPIO" + String(SERVO_PINS[i]) +
-           ", ch=" + String(SERVO_CHANNELS[i]) +
-           ") -> " + (ok ? "OK  pulse=" + String(servoLastUs[i]) + "us"
-                         : "FAILED"));
+           " ledcSetup(ch=" + String(SERVO_CHANNELS[i]) +
+           ", pin=GPIO" + String(SERVO_PINS[i]) +
+           ") actualFreq=" + String(actualFreq, 2) + "Hz" +
+           " -> " + (ok ? "OK  pulse=" + String(servoLastUs[i]) + "us"
+                        : "FAILED"));
   }
   redirectHome();
 }
@@ -216,8 +207,8 @@ void handleDetach() {
   if (!servoAttached[i]) {
     addLog(">> Servo " + String(n) + " already detached - skipped.");
   } else {
-    // ledcDetach removes the GPIO matrix connection and stops PWM output.
-    ledcDetach(SERVO_PINS[i]);
+    // ledcDetachPin removes the GPIO matrix connection and stops PWM output.
+    ledcDetachPin(SERVO_PINS[i]);
     servoAttached[i] = false;
     addLog(">> Servo " + String(n) + " detached"
            "  pin=GPIO" + String(SERVO_PINS[i]) +
@@ -240,7 +231,7 @@ void handleWrite() {
     addLog(">> Servo " + String(n) + " NOT attached - write ignored.");
   } else {
     uint32_t duty = usToDuty(us);
-    ledcWrite(SERVO_PINS[i], duty);
+    ledcWrite(SERVO_CHANNELS[i], duty);  // core 2.x: write by channel, not pin
     servoLastUs[i] = us;
     addLog(">> Servo " + String(n) +
            " ledcWrite(ch=" + String(SERVO_CHANNELS[i]) +
@@ -257,7 +248,7 @@ void handleWriteAll() {
   for (int i = 0; i < SERVO_COUNT; i++) {
     if (servoAttached[i]) {
       uint32_t duty = usToDuty(us);
-      ledcWrite(SERVO_PINS[i], duty);
+      ledcWrite(SERVO_CHANNELS[i], duty);  // core 2.x: write by channel, not pin
       servoLastUs[i] = us;
       wrote++;
       addLog(">> Servo " + String(i + 1) +
