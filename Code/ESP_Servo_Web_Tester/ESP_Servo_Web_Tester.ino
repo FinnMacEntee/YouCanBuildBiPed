@@ -1,4 +1,31 @@
 /*
+compile error
+
+C:\Code\Biped\YouCanBuildBiPed\Code\ESP_Servo_Web_Tester\ESP_Servo_Web_Tester.ino: In function 'void handleAttach()':
+C:\Code\Biped\YouCanBuildBiPed\Code\ESP_Servo_Web_Tester\ESP_Servo_Web_Tester.ino:190:15: error: 'ledcAttach' was not declared in this scope
+     bool ok = ledcAttach(SERVO_PINS[i], SERVO_FREQ, SERVO_RES);
+               ^~~~~~~~~~
+C:\Code\Biped\YouCanBuildBiPed\Code\ESP_Servo_Web_Tester\ESP_Servo_Web_Tester.ino:190:15: note: suggested alternative: 'ledcAttachPin'
+     bool ok = ledcAttach(SERVO_PINS[i], SERVO_FREQ, SERVO_RES);
+               ^~~~~~~~~~
+               ledcAttachPin
+C:\Code\Biped\YouCanBuildBiPed\Code\ESP_Servo_Web_Tester\ESP_Servo_Web_Tester.ino: In function 'void handleDetach()':
+C:\Code\Biped\YouCanBuildBiPed\Code\ESP_Servo_Web_Tester\ESP_Servo_Web_Tester.ino:215:5: error: 'ledcDetach' was not declared in this scope
+     ledcDetach(SERVO_PINS[i]);
+     ^~~~~~~~~~
+C:\Code\Biped\YouCanBuildBiPed\Code\ESP_Servo_Web_Tester\ESP_Servo_Web_Tester.ino:215:5: note: suggested alternative: 'ledcDetachPin'
+     ledcDetach(SERVO_PINS[i]);
+     ^~~~~~~~~~
+     ledcDetachPin
+exit status 1
+
+Compilation error: 'ledcAttach' was not declared in this scope
+
+*/
+
+
+
+/*
 the contents of ESP_Servo_Web_Tester\secrets.h
 
 // WiFi credentials — DO NOT COMMIT THIS FILE.
