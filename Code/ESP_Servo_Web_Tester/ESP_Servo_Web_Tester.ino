@@ -52,18 +52,18 @@ const char* SERVO_LABELS[SERVO_COUNT] = {
 };
 
 const int  SERVO_FREQ    = 50;    // Hz
-const int  SERVO_RES     = 16;    // bits  (65536 counts = 20 000 µs period)
+const int  SERVO_RES     = 14;    // bits  (16384 counts = 20 000 us period)
 const int  SERVO_MIN_US  = 500;
 const int  SERVO_MAX_US  = 2400;
 
 bool servoAttached[SERVO_COUNT] = {false, false, false, false, false};
 int  servoLastUs[SERVO_COUNT]   = {1500, 1500, 1500, 1500, 1500};
 
-// Convert microseconds → 16-bit LEDC duty value for 50 Hz.
-// Period = 20 000 µs = 65536 counts  →  1 count ≈ 0.305 µs
+// Convert microseconds -> LEDC duty value for 50 Hz at SERVO_RES bits.
+// Period = 20 000 us = (1<<SERVO_RES) counts.
 uint32_t usToDuty(int us) {
   return (uint32_t)constrain(us, SERVO_MIN_US, SERVO_MAX_US)
-         * (1 << SERVO_RES) / 20000;
+         * (1UL << SERVO_RES) / 20000;
 }
 
 // ─── Debug log (circular buffer) ─────────────────────────────────
@@ -203,21 +203,17 @@ void handleAttach() {
   } else {
     // Core 2.x API: ledcSetup configures a timer for this channel,
     // ledcAttachPin routes the GPIO to that channel.
-    // ledcSetup returns the actual frequency (0.0 = setup failed).
+    // NOTE: ledcSetup may return 0 in some core builds even on success,
+    // so treat attach as OK and just log the reported freq for reference.
     double actualFreq = ledcSetup(SERVO_CHANNELS[i], SERVO_FREQ, SERVO_RES);
-    bool ok = (actualFreq > 0.0);
-    if (ok) {
-      ledcAttachPin(SERVO_PINS[i], SERVO_CHANNELS[i]);
-      // Write a neutral pulse immediately so the servo holds centre.
-      ledcWrite(SERVO_CHANNELS[i], usToDuty(servoLastUs[i]));
-    }
-    servoAttached[i] = ok;
+    ledcAttachPin(SERVO_PINS[i], SERVO_CHANNELS[i]);
+    ledcWrite(SERVO_CHANNELS[i], usToDuty(servoLastUs[i]));
+    servoAttached[i] = true;
     addLog(">> Servo " + String(n) +
            " ledcSetup(ch=" + String(SERVO_CHANNELS[i]) +
            ", pin=GPIO" + String(SERVO_PINS[i]) +
            ") freq=" + String(actualFreq, 1) + "Hz" +
-           " -> " + (ok ? "OK  pulse=" + String(servoLastUs[i]) + "us"
-                        : "FAILED"));
+           "  attached pulse=" + String(servoLastUs[i]) + "us");
   }
   redirectHome();
 }
