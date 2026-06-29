@@ -1,4 +1,16 @@
 /*
+=== Ready ===
+>> Servo 5 ledcSetup(ch=1, pin=GPIO38) freq=0.0Hz -> FAILED
+>> Servo 1 ledcSetup(ch=0, pin=GPIO47) freq=0.0Hz -> FAILED
+>> Servo 1 ledcSetup(ch=0, pin=GPIO47) freq=0.0Hz -> FAILED
+>> Servo 2 ledcSetup(ch=2, pin=GPIO21) freq=0.0Hz -> FAILED
+>> Servo 1 ledcSetup(ch=0, pin=GPIO47) freq=0.0Hz -> FAILED
+>> Servo 3 ledcSetup(ch=4, pin=GPIO18) freq=0.0Hz -> FAILED
+>> Servo 4 ledcSetup(ch=6, pin=GPIO17) freq=0.0Hz -> FAILED
+>> Servo 5 ledcSetup(ch=1, pin=GPIO38) freq=0.0Hz -> FAILED
+
+
+
 the contents of ESP_Servo_Web_Tester\secrets.h
 
 // WiFi credentials — DO NOT COMMIT THIS FILE.
