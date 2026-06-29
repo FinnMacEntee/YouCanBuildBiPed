@@ -1,38 +1,38 @@
 /*
-Runtime errors:
-=== Ready ===
->> Servo 1 ledcSetup(ch=0, pin=GPIO47) actualFreq=0.00Hz -> FAILED
->> Servo 2 ledcSetup(ch=1, pin=GPIO21) actualFreq=0.00Hz -> FAILED
->> Servo 3 ledcSetup(ch=2, pin=GPIO18) actualFreq=0.00Hz -> FAILED
->> Servo 4 ledcSetup(ch=3, pin=GPIO17) actualFreq=0.00Hz -> FAILED
->> Servo 5 ledcSetup(ch=4, pin=GPIO38) actualFreq=0.00Hz -> FAILED
-*/ 
+the contents of ESP_Servo_Web_Tester\secrets.h
+
+// WiFi credentials — DO NOT COMMIT THIS FILE.
+// It is listed in .gitignore at the repo root.
+const char* password = "";
+
+*/
 #include <WiFi.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
+#include "secrets.h"  // WiFi password — git-ignored, never committed
 // Direct LEDC API — no ESP32Servo library.
-// Uses Arduino ESP32 core 2.x API: ledcSetup / ledcAttachPin / ledcWrite(channel).
+// Uses simplified 3.x API: ledcAttach(pin) / ledcDetach(pin) / ledcWrite(pin).
+// ledcAttachChannel is NOT available in this board package; channels are auto-assigned.
 
 // ─── WiFi ────────────────────────────────────────────────────────
 const char* ssid     = "JDM";
-const char* password = "";
+// password is defined in secrets.h
 
 WebServer server(80);
 
 // ─── Servo config ────────────────────────────────────────────────
 const int SERVO_COUNT = 5;
 
-const int SERVO_PINS[SERVO_COUNT]     = {47, 21, 18, 17, 38};
-// Explicit LEDC hardware channels 0-4 (ESP32-S3 has channels 0-7).
-// Hard-coding these avoids the auto-allocator that produced channels 100-104.
-const int SERVO_CHANNELS[SERVO_COUNT] = { 0,  1,  2,  3,  4};
+const int SERVO_PINS[SERVO_COUNT] = {47, 21, 18, 17, 38};
+// Channel assignment is automatic via ledcAttach() — the framework manages
+// the hardware LEDC channels internally on this board package.
 
 const char* SERVO_LABELS[SERVO_COUNT] = {
-  "S1  GPIO47  ch0  R-Upper",
-  "S2  GPIO21  ch1  R-Lower",
-  "S3  GPIO18  ch2  L-Upper",
-  "S4  GPIO17  ch3  L-Lower",
-  "S5  GPIO38  ch4  Hips"
+  "S1  GPIO47  R-Upper",
+  "S2  GPIO21  R-Lower",
+  "S3  GPIO18  L-Upper",
+  "S4  GPIO17  L-Lower",
+  "S5  GPIO38  Hips"
 };
 
 const int  SERVO_FREQ    = 50;    // Hz
@@ -185,21 +185,17 @@ void handleAttach() {
   if (servoAttached[i]) {
     addLog(">> Servo " + String(n) + " already attached - skipped.");
   } else {
-    // Core 2.x API: ledcSetup configures the hardware channel/timer,
-    // ledcAttachPin routes the GPIO matrix to that channel.
-    // ledcSetup returns the actual configured frequency (0.0 means error).
-    double actualFreq = ledcSetup(SERVO_CHANNELS[i], SERVO_FREQ, SERVO_RES);
-    bool ok = (actualFreq > 0.0);
-    if (ok) {
-      ledcAttachPin(SERVO_PINS[i], SERVO_CHANNELS[i]);
-      // Write a neutral pulse immediately so the servo holds centre.
-      ledcWrite(SERVO_CHANNELS[i], usToDuty(servoLastUs[i]));
-    }
+    // Simplified 3.x API: ledcAttach auto-assigns a hardware LEDC channel.
+    // Returns true on success, false if the pin or peripheral is unavailable.
+    bool ok = ledcAttach(SERVO_PINS[i], SERVO_FREQ, SERVO_RES);
     servoAttached[i] = ok;
+    if (ok) {
+      // Write a neutral pulse immediately so the servo holds centre.
+      ledcWrite(SERVO_PINS[i], usToDuty(servoLastUs[i]));
+    }
     addLog(">> Servo " + String(n) +
-           " ledcSetup(ch=" + String(SERVO_CHANNELS[i]) +
-           ", pin=GPIO" + String(SERVO_PINS[i]) +
-           ") actualFreq=" + String(actualFreq, 2) + "Hz" +
+           " ledcAttach(pin=GPIO" + String(SERVO_PINS[i]) +
+           ", " + String(SERVO_FREQ) + "Hz, " + String(SERVO_RES) + "bit)" +
            " -> " + (ok ? "OK  pulse=" + String(servoLastUs[i]) + "us"
                         : "FAILED"));
   }
@@ -215,12 +211,10 @@ void handleDetach() {
   if (!servoAttached[i]) {
     addLog(">> Servo " + String(n) + " already detached - skipped.");
   } else {
-    // ledcDetachPin removes the GPIO matrix connection and stops PWM output.
-    ledcDetachPin(SERVO_PINS[i]);
+    // ledcDetach removes the GPIO matrix connection and stops PWM output.
+    ledcDetach(SERVO_PINS[i]);
     servoAttached[i] = false;
-    addLog(">> Servo " + String(n) + " detached"
-           "  pin=GPIO" + String(SERVO_PINS[i]) +
-           "  ch=" + String(SERVO_CHANNELS[i]));
+    addLog(">> Servo " + String(n) + " detached  pin=GPIO" + String(SERVO_PINS[i]));
   }
   redirectHome();
 }
@@ -239,10 +233,10 @@ void handleWrite() {
     addLog(">> Servo " + String(n) + " NOT attached - write ignored.");
   } else {
     uint32_t duty = usToDuty(us);
-    ledcWrite(SERVO_CHANNELS[i], duty);  // core 2.x: write by channel, not pin
+    ledcWrite(SERVO_PINS[i], duty);
     servoLastUs[i] = us;
     addLog(">> Servo " + String(n) +
-           " ledcWrite(ch=" + String(SERVO_CHANNELS[i]) +
+           " ledcWrite(pin=GPIO" + String(SERVO_PINS[i]) +
            ", duty=" + String(duty) +
            ")  =" + String(us) + "us");
   }
@@ -256,11 +250,11 @@ void handleWriteAll() {
   for (int i = 0; i < SERVO_COUNT; i++) {
     if (servoAttached[i]) {
       uint32_t duty = usToDuty(us);
-      ledcWrite(SERVO_CHANNELS[i], duty);  // core 2.x: write by channel, not pin
+      ledcWrite(SERVO_PINS[i], duty);
       servoLastUs[i] = us;
       wrote++;
       addLog(">> Servo " + String(i + 1) +
-             " ledcWrite(ch=" + String(SERVO_CHANNELS[i]) +
+             " ledcWrite(pin=GPIO" + String(SERVO_PINS[i]) +
              ", duty=" + String(duty) +
              ")  =" + String(us) + "us");
     }
@@ -300,9 +294,8 @@ void setup() {
     addLog("WiFi FAILED after " + String(attempts) + " attempts. Server unreachable.");
   }
 
-  // Using direct LEDC API - no library timer allocation needed.
-  // Channels 0-4 are hard-assigned above in SERVO_CHANNELS[].
-  addLog("Direct LEDC mode. Servo channels: 0=S1 1=S2 2=S3 3=S4 4=S5");
+  // Using simplified 3.x LEDC API — channel assignment is automatic.
+  addLog("Direct LEDC mode. ledcAttach() auto-assigns channels.");
 
   server.on("/",         handleRoot);
   server.on("/attach",   handleAttach);
